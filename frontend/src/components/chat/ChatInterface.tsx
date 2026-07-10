@@ -34,7 +34,7 @@ export default function ChatInterface() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://aegis-agentic-core.onrender.com/api";
         const res = await fetch(`${apiBaseUrl.replace("/api", "")}/docs`, { method: "HEAD" });
         if (res.ok || res.status === 404 || res.status === 200) {
           setBackendStatus("online");
@@ -72,7 +72,7 @@ export default function ChatInterface() {
     ]);
 
     try {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://aegis-agentic-core.onrender.com/api";
       const res = await fetch(`${apiBaseUrl}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
