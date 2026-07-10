@@ -37,54 +37,75 @@ Copy `.env.example` to `.env` and fill in your Gemini API key:
 cp .env.example .env
 ```
 
-### Running Locally (Docker)
-To run the full stack locally:
-```bash
-docker-compose up --build
-```
-Frontend will be available at `http://localhost:3000`.
-Backend API will be at `http://localhost:8000/api`.
+### Quick Start (Recommended - Docker)
+1. **Set Environment Variables**:
+   Copy `.env.example` to `.env` and enter your `GEMINI_API_KEY`:
+   ```bash
+   cp .env.example .env
+   ```
+2. **Build and Run**:
+   Spin up the frontend and backend services:
+   ```bash
+   docker compose up --build
+   ```
+3. **Access the Applications**:
+   - **Frontend UI**: [http://localhost:3000](http://localhost:3000)
+   - **Backend OpenAPI Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### Running Locally (Manual)
-**Backend:**
+*Note: On startup, the backend automatically initializes the SQLite database from `orders.csv` and populates the ChromaDB index by parsing the PDF documents in `backend/app/doc/`.*
+
+### Manual Local Execution (Fallback)
+If you prefer to run the services bare-metal:
+
+**1. Backend:**
 ```bash
 cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 pip install -r requirements.txt
-```
-**Add Documents (RAG):**
-Place any `.pdf` or `.md` files you want to index into `backend/app/doc/`. The backend will automatically parse, chunk, and embed them using `PyMuPDF` upon startup.
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-**Frontend:**
+**2. Frontend:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## Deployment
-
-### Deployment on Render (Backend)
-1. Connect your repository to Render.
-2. Create a new "Web Service".
-3. Choose Docker as the runtime.
-4. Set the Root Directory to `backend`.
-5. Add the `GEMINI_API_KEY` environment variable.
-
-### Deployment on Vercel (Frontend)
-1. Connect your repository to Vercel.
-2. Set the Framework Preset to Next.js.
-3. Set the Root Directory to `frontend`.
-4. Add the `NEXT_PUBLIC_API_URL` pointing to your deployed Render URL.
+---
 
 ## API Endpoints
-- `POST /api/chat`: Send a message to the chatbot. Returns a **Server-Sent Events (SSE)** stream.
-  - Streams token-by-token using `yield "data: {...}\n\n"`.
-  - JSON chunk types: `tool` (intent), `chunk` (text), and `metadata` (citations/SQL queries).
+
+### `POST /api/chat`
+Sends a message to the chatbot and returns a real-time **Server-Sent Events (SSE)** stream.
+
+- **Request Body**:
+  ```json
+  {
+    "message": "What is the status of order ORD-1001?"
+  }
+  ```
+- **Stream Response Chunk Types**:
+  - `tool`: The selected intent routing (`RAG`, `SQL`, `BOTH`, or `FALLBACK`).
+  - `chunk`: Real-time streaming content.
+  - `metadata`: Citations for RAG or execution metadata like generated SQL query.
+
+#### Test the API with `curl`
+Use the following `curl` command (the `-N` or `--no-buffer` flag ensures real-time streaming output in your terminal):
+
+```bash
+curl -N -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Who bought the Mechanical Keyboard under order ORD-1001?"}'
+```
+
+---
+
+## Deployment
+For details on deploying the application to production, refer to the [deployment_guide.md](file:///Users/haneet/.gemini/antigravity-ide/brain/0b358b6d-4efd-4e53-947f-ec0293deca56/deployment_guide.md).
 
 ## Known Limitations
 - Text-to-SQL operates under the assumption of a static, simple SQLite schema for demonstration purposes.
 - ChromaDB is used locally; in production, you might want to use a managed vector database (like Pinecone or Qdrant).
+
