@@ -100,6 +100,16 @@ curl -N -X POST http://localhost:8000/api/chat \
   -d '{"message": "Who bought the Mechanical Keyboard under order ORD-1001?"}'
 ```
 
+### Example Questions to Try
+Test the chatbot's intelligent routing and dual-mode execution using these queries:
+
+| Type | Intent/Route | Example Query |
+| :--- | :--- | :--- |
+| **SQL Database** | `SQL` | `"Show me all orders that are currently pending."`<br>`"What is the total amount spent on Mechanical Keyboards?"`<br>`"Who is the customer for order ORD-1002?"` |
+| **RAG Docs** | `RAG` | `"What is the return policy and how many days do I have?"`<br>`"What is covered under the product warranty?"`<br>`"What are the rules for taking sick leave?"` |
+| **Dual Mode** | `BOTH` | `"Who bought order ORD-1001, and what is the warranty policy for their product?"`<br>`"Check the amount for ORD-1003 and check if it qualifies for bulk discounts."` |
+| **Fallback** | `FALLBACK` | `"What is the weather like in New York today?"`<br>`"How do I cook pasta?"` |
+
 ---
 
 ## Deployment
