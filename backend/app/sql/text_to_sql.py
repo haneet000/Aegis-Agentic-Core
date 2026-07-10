@@ -8,12 +8,11 @@ def text_to_sql(query: str) -> dict:
     Generates SQL from user query, executes it, and returns the result.
     """
     api_key = os.environ.get("GEMINI_API_KEY")
-    is_mock = not api_key or api_key.startswith("your_") or api_key.startswith("AQ.")
     schema = get_db_schema()
 
     sql_query = None
 
-    if not is_mock:
+    if api_key:
         try:
             client = genai.Client(api_key=api_key)
             prompt = f"""
@@ -27,7 +26,7 @@ Return ONLY the raw SQL query, no markdown formatting, no explanation.
 User Question: {query}
 """
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 contents=prompt,
             )
             sql_query = response.text.strip()
@@ -38,7 +37,7 @@ User Question: {query}
         except Exception as e:
             from app.utils.logger import get_logger
             logger = get_logger(__name__)
-            logger.error(f"Gemini Text-to-SQL generation failed: {e}. Falling back to local heuristic SQL.")
+            logger.error(f"Gemini Text-to-SQL generation failed. EXACT EXCEPTION: {e.__class__.__name__}: {e}. Falling back to local heuristic SQL.")
 
     if not sql_query:
         # Heuristic local SQL generation
@@ -92,7 +91,7 @@ User Question: {query}
     results = execute_sql_query(sql_query)
     
     # Generate natural language response
-    if not is_mock:
+    if api_key:
         try:
             client = genai.Client(api_key=api_key)
             nl_prompt = f"""
@@ -105,7 +104,7 @@ SQL Results: {json.dumps(results)}
 Answer concisely and clearly.
 """
             nl_response_stream = client.models.generate_content_stream(
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 contents=nl_prompt,
             )
             for chunk in nl_response_stream:
@@ -116,7 +115,7 @@ Answer concisely and clearly.
         except Exception as e:
             from app.utils.logger import get_logger
             logger = get_logger(__name__)
-            logger.error(f"Gemini Text-to-SQL synthesis failed: {e}. Falling back to local synthesis.")
+            logger.error(f"Gemini Text-to-SQL synthesis failed. EXACT EXCEPTION: {e.__class__.__name__}: {e}. Falling back to local synthesis.")
 
     # Mock Offline Synthesis
     yield {"type": "chunk", "content": f"**[Offline/Mock Mode]** Executed SQLite query: `{sql_query}`\n\n**Database Results:**\n\n"}

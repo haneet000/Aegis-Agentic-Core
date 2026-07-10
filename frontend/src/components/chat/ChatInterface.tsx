@@ -60,45 +60,59 @@ export default function ChatInterface() {
       if (!reader) throw new Error("No reader");
 
       let currentText = "";
+      let buffer = "";
       
+      const processMessage = (message: string) => {
+        if (message.startsWith("data: ")) {
+          const dataStr = message.slice(6).trim();
+          if (dataStr === "[DONE]") return;
+          
+          try {
+            const data = JSON.parse(dataStr);
+            setMessages((prev) =>
+              prev.map((msg) => {
+                if (msg.id === tempId) {
+                  if (data.type === "tool") {
+                    return { ...msg, tool_used: data.tool_used };
+                  } else if (data.type === "chunk") {
+                    currentText += data.content;
+                    return { ...msg, content: currentText, isLoading: false };
+                  } else if (data.type === "metadata") {
+                    return { 
+                      ...msg, 
+                      citations: data.citations || msg.citations, 
+                      sql_query: data.sql_query || msg.sql_query,
+                      isLoading: false 
+                    };
+                  }
+                }
+                return msg;
+              })
+            );
+          } catch (e) {
+            console.error("Error parsing SSE data", e, dataStr);
+          }
+        }
+      };
+
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n\n");
-        
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const dataStr = line.slice(6);
-            if (dataStr === "[DONE]") break;
-            
-            try {
-              const data = JSON.parse(dataStr);
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id === tempId) {
-                    if (data.type === "tool") {
-                      return { ...msg, tool_used: data.tool_used };
-                    } else if (data.type === "chunk") {
-                      currentText += data.content;
-                      return { ...msg, content: currentText, isLoading: false };
-                    } else if (data.type === "metadata") {
-                      return { 
-                        ...msg, 
-                        citations: data.citations || msg.citations, 
-                        sql_query: data.sql_query || msg.sql_query,
-                        isLoading: false 
-                      };
-                    }
-                  }
-                  return msg;
-                })
-              );
-            } catch (e) {
-              console.error("Error parsing SSE data", e, dataStr);
-            }
+        if (done) {
+          if (buffer.trim()) {
+            processMessage(buffer);
           }
+          break;
+        }
+        
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const message = buffer.slice(0, boundary).trim();
+          buffer = buffer.slice(boundary + 2);
+          if (message) {
+            processMessage(message);
+          }
+          boundary = buffer.indexOf("\n\n");
         }
       }
     } catch (error) {

@@ -35,9 +35,8 @@ def retrieve_and_answer(query: str) -> dict:
     logger.info(f"RAG Retrieval retrieved {len(contexts)} contexts for query: {query}")
         
     api_key = os.environ.get("GEMINI_API_KEY")
-    is_mock = not api_key or api_key.startswith("your_") or api_key.startswith("AQ.")
     
-    if not is_mock:
+    if api_key:
         try:
             client = genai.Client(api_key=api_key)
             prompt = f"""
@@ -50,7 +49,7 @@ Context:
 User Question: {query}
 """
             response_stream = client.models.generate_content_stream(
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 contents=prompt,
             )
             for chunk in response_stream:
@@ -59,7 +58,7 @@ User Question: {query}
             yield {"type": "metadata", "citations": citations}
             return
         except Exception as e:
-            logger.error(f"Gemini RAG synthesis failed: {e}. Falling back to local offline mode.")
+            logger.error(f"Gemini RAG synthesis failed. EXACT EXCEPTION: {e.__class__.__name__}: {e}. Falling back to local offline mode.")
             
     # Mock Offline Synthesis
     yield {"type": "chunk", "content": f"**[Offline/Mock Mode]** Here is the relevant information retrieved from our document base:\n\n"}

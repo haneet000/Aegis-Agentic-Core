@@ -11,10 +11,9 @@ def route_intent(query: str) -> str:
     Returns one of: 'RAG', 'SQL', 'BOTH', 'FALLBACK'
     """
     api_key = os.environ.get("GEMINI_API_KEY")
-    is_mock = not api_key or api_key.startswith("your_") or api_key.startswith("AQ.")
     
-    if is_mock:
-        logger.info("Using local heuristic router due to invalid/mock API key.")
+    if not api_key:
+        logger.warning("No GEMINI_API_KEY environment variable found. Falling back to local heuristic routing.")
         q = query.lower()
         has_sql = any(w in q for w in ["order", "customer", "product", "amount", "status", "price", "sale", "date", "table"])
         has_rag = any(w in q for w in ["leave", "policy", "remote", "work", "handbook", "vacation", "sick", "holiday", "document"])
@@ -55,7 +54,7 @@ User Question: {query}
 """
 
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-1.5-flash',
             contents=prompt,
         )
         
@@ -71,7 +70,7 @@ User Question: {query}
             intent = "FALLBACK"
         return intent
     except Exception as e:
-        logger.error(f"Gemini routing failed: {e}. Falling back to local heuristic routing.")
+        logger.error(f"Gemini routing failed. EXACT EXCEPTION: {e.__class__.__name__}: {e}. Falling back to local heuristic routing.")
         q = query.lower()
         has_sql = any(w in q for w in ["order", "customer", "product", "amount", "status", "price", "sale", "date", "table"])
         has_rag = any(w in q for w in ["leave", "policy", "remote", "work", "handbook", "vacation", "sick", "holiday", "document"])
