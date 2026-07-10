@@ -37,3 +37,10 @@ backend/orders.db
 # Editor
 .vscode/
 .idea/
+
+# Caches and DBs
+.hf_cache/
+backend/.hf_cache/
+chroma_db/
+**/chroma_db/
+**/__pycache__/
