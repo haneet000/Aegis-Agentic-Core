@@ -46,6 +46,10 @@ def ingest_documents(doc_dir: str = "./app/doc"):
     """
     Ingests actual PDF and Markdown files from the specified directory.
     """
+    if doc_dir == "./app/doc":
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        doc_dir = os.path.abspath(os.path.join(current_dir, "..", "doc"))
+
     if not os.path.exists(doc_dir):
         logger.warning(f"Directory {doc_dir} does not exist. Skipping ingestion.")
         return

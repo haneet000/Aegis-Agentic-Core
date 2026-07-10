@@ -11,11 +11,27 @@ def route_intent(query: str) -> str:
     Returns one of: 'RAG', 'SQL', 'BOTH', 'FALLBACK'
     """
     api_key = os.environ.get("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
+    is_mock = not api_key or api_key.startswith("your_") or api_key.startswith("AQ.")
     
-    schema = get_db_schema()
-    
-    prompt = f"""
+    if is_mock:
+        logger.info("Using local heuristic router due to invalid/mock API key.")
+        q = query.lower()
+        has_sql = any(w in q for w in ["order", "customer", "product", "amount", "status", "price", "sale", "date", "table"])
+        has_rag = any(w in q for w in ["leave", "policy", "remote", "work", "handbook", "vacation", "sick", "holiday", "document"])
+        if has_sql and has_rag:
+            return "BOTH"
+        elif has_sql:
+            return "SQL"
+        elif has_rag:
+            return "RAG"
+        else:
+            return "FALLBACK"
+
+    try:
+        client = genai.Client(api_key=api_key)
+        schema = get_db_schema()
+        
+        prompt = f"""
 You are an intelligent router for a chatbot. 
 You must decide which tool is best to answer the user's question.
 
@@ -38,12 +54,11 @@ Respond ONLY with a valid JSON object in the following format:
 User Question: {query}
 """
 
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
-    )
-    
-    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        
         text = response.text.strip()
         if text.startswith("```json"):
             text = text[7:-3].strip()
@@ -56,5 +71,15 @@ User Question: {query}
             intent = "FALLBACK"
         return intent
     except Exception as e:
-        logger.error(f"Error parsing intent: {e}")
-        return "FALLBACK"
+        logger.error(f"Gemini routing failed: {e}. Falling back to local heuristic routing.")
+        q = query.lower()
+        has_sql = any(w in q for w in ["order", "customer", "product", "amount", "status", "price", "sale", "date", "table"])
+        has_rag = any(w in q for w in ["leave", "policy", "remote", "work", "handbook", "vacation", "sick", "holiday", "document"])
+        if has_sql and has_rag:
+            return "BOTH"
+        elif has_sql:
+            return "SQL"
+        elif has_rag:
+            return "RAG"
+        else:
+            return "FALLBACK"

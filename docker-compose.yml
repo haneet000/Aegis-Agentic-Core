@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build: ./backend
@@ -9,6 +7,7 @@ services:
       - ./backend:/app
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - HF_HOME=/app/.hf_cache
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
